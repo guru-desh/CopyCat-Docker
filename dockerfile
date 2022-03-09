@@ -86,7 +86,7 @@ COPY ./LetterLevel ./LetterLevel
 COPY ./prepare ./htk/prepare
 COPY ./WordLevel ./WordLevel
 
-RUN cd ./htk
+WORKDIR /htk
 RUN chmod +x prepare
 # This prepare script is where htk is built from scratch
 RUN ./prepare 
@@ -103,14 +103,15 @@ RUN ./prepare
 # RUN git clone https://github.com/espnet/espnet.git
 # #RUN git clone https://github.com/kaldi-asr/kaldi.git
 
-# RUN cd /espnet/tools
+# WORKDIR /espnet/tools
 # #RUN ln -s $(pwd)/../../kaldi .
 # RUN ./setup_anaconda.sh anaconda espnet 3.8
 # RUN make
-# #RUN ./setup_python.sh $(command -v python3)
-# # -----------------------------------------------------------------------
+# #RUN ./setup_python.sh $(command -v python3
+# # # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
+WORKDIR /
 RUN cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
     wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
@@ -168,10 +169,17 @@ RUN python3 -m pip install --upgrade pip && \
     tf-bodypix \
     tfjs-graph-converter \
     tensorflow \
-    typing-extensions
+    typing-extensions \
+    kaldiio \
+    humanfriendly \
+    soundfile \
+    typeguard \
+    espnet \
+    jupyter
 # ----------------------------------------------------------------------
 
 # Future steps:
 # - wget CopyCat Dataset from Dropbox
 # - git clone CopyCat-HTK repo
 # - Fix ESPNet issues
+# Why is there no cuDNN? ( Could NOT find CUDNN (missing: CUDNN_LIBRARY CUDNN_INCLUDE_DIR) (Required is at least version "7.5"))
