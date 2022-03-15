@@ -111,8 +111,7 @@ RUN ./prepare
 
 # -------------------------------ESPNET----------------------------------
 WORKDIR /
-
-# Install Kaldi inside of Espnet
+# Install Kaldi inside of Espnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
 RUN git clone https://github.com/espnet/espnet && \
     cd espnet/tools && \
     git clone https://github.com/kaldi-asr/kaldi.git && \
@@ -128,6 +127,7 @@ RUN git clone https://github.com/espnet/espnet && \
     make -j clean depend && \
     make -j"$(nproc)"
 
+# Install Espnet (source: https://espnet.github.io/espnet/installation.html)
 WORKDIR /espnet
 RUN cd tools && \
     # Setup system Python environment
@@ -143,32 +143,32 @@ RUN cd tools && \
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
-# WORKDIR /
-# RUN cd /opt/ &&\
-#     # Download and unzip OpenCV and opencv_contrib and delete zip files
-#     wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-#     unzip $OPENCV_VERSION.zip &&\
-#     rm $OPENCV_VERSION.zip &&\
-#     wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
-#     unzip ${OPENCV_VERSION}.zip &&\
-#     rm ${OPENCV_VERSION}.zip &&\
-#     # Create build folder and switch to it
-#     mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
-#     # Cmake configure
-#     cmake \
-#         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
-#         -DWITH_CUDA=ON \
-#         -DCMAKE_BUILD_TYPE=RELEASE \
-#         # Install path will be /usr/local/lib (lib is implicit)
-#         -DCMAKE_INSTALL_PREFIX=/usr/local \
-#         .. &&\
-#     # Make
-#     make -j"$(nproc)" && \
-#     # Install to /usr/local/lib
-#     make install && \
-#     ldconfig &&\
-#     # Remove OpenCV sources and build folder
-#     rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+WORKDIR /
+RUN cd /opt/ &&\
+    # Download and unzip OpenCV and opencv_contrib and delete zip files
+    wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+    unzip $OPENCV_VERSION.zip &&\
+    rm $OPENCV_VERSION.zip &&\
+    wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+    unzip ${OPENCV_VERSION}.zip &&\
+    rm ${OPENCV_VERSION}.zip &&\
+    # Create build folder and switch to it
+    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+    # Cmake configure
+    cmake \
+        -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+        -DWITH_CUDA=ON \
+        -DCMAKE_BUILD_TYPE=RELEASE \
+        # Install path will be /usr/local/lib (lib is implicit)
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        .. &&\
+    # Make
+    make -j"$(nproc)" && \
+    # Install to /usr/local/lib
+    make install && \
+    ldconfig &&\
+    # Remove OpenCV sources and build folder
+    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
 # -----------------------------------------------------------------------
 
 # ----------------------------Azure Kinect SDK---------------------------
