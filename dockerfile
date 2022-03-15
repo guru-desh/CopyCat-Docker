@@ -74,7 +74,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         pkg-config \
         # ESPNet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3.8-dev \ 
-        python3-numpy \
     # Install dependencies for ESPNet
     && apt-get -y install --no-install-recommends \ 
         apt-utils \
@@ -92,10 +91,11 @@ RUN apt-get update && apt-get upgrade -y &&\
     && rm -rf /var/lib/apt/lists/*
 
 # Set Python 3.7 as default Python and Update pip
-RUN update-alternatives --set python3 /usr/bin/python3.8 && \
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 2 && \
+    update-alternatives --set python3 /usr/bin/python3.8 && \
     python3 -m pip install --upgrade pip && \
-    python3 -m pip install --upgrade setuptools
-
+    python3 -m pip install --upgrade setuptools && \
+    python3 -m pip install numpy
 
 # -----------------------------------HTK-----------------------------------
 COPY ./htk ./htk
