@@ -14,7 +14,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install Linux Dependencies
 RUN apt-get update && apt-get upgrade -y &&\
-    # Install Dependencies for ESPNet
+    # Install Overall Dependencies
     apt-get install -y --no-install-recommends \
         g++ \
         make \
@@ -72,71 +72,103 @@ RUN apt-get update && apt-get upgrade -y &&\
         libtbb-dev \
         libgtk2.0-dev \
         pkg-config \
-        python3-dev \
+        # ESPNet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        python3.8-dev \ 
         python3-numpy \
+    # Install dependencies for ESPNet
+    && apt-get -y install --no-install-recommends \ 
+        apt-utils \
+        gawk \
+        libboost-all-dev \
+        libbz2-dev \
+        liblzma-dev \
+        unzip \
+        wget \
+        zip \
+    && apt-get clean \
     # Install Dependencies for Azure Kinect SDK
     && apt-get install -y \
         software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
+# Set Python 3.7 as default Python and Update pip
+RUN update-alternatives --set python3 /usr/bin/python3.8 && \
+    python3 -m pip install --upgrade pip && \
+    python3 -m pip install --upgrade setuptools
+
+
 # -----------------------------------HTK-----------------------------------
 COPY ./htk ./htk
 COPY ./gt2k ./gt2k
-COPY ./LetterLevel ./LetterLevel
 COPY ./prepare ./htk/prepare
-COPY ./WordLevel ./WordLevel
+# Deleted LetterLevel and WordLevel folders because they are not used in this project
 
 WORKDIR /htk
 RUN chmod +x prepare
 # This prepare script is where htk is built from scratch
 RUN ./prepare 
-# -------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
-# # -------------------------------ESPNET----------------------------------
-# #RUN ln -s /usr/bin/python3 /usr/bin/python
+# -------------------------------ESPNET----------------------------------
+WORKDIR /
 
-# #RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-# #RUN python get-pip.py
+# Install Kaldi inside of Espnet
+RUN git clone https://github.com/espnet/espnet && \
+    cd espnet/tools && \
+    git clone https://github.com/kaldi-asr/kaldi.git && \
+    # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
+    ./kaldi/tools/extras/install_mkl.sh && \
+    cd kaldi/tools && \
+    # Could not use -j due to packages not compiling. Removing -j fixed the issue: https://github.com/kaldi-asr/kaldi/issues/3987
+    make && \
+    ./extras/install_irstlm.sh && \
+    cd ../src && \
+    # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
+    ./configure --shared --use-cuda && \
+    make -j clean depend && \
+    make -j"$(nproc)"
 
-# #RUN pip3 install torch numpy kaldiio humanfriendly soundfile typeguard espnet jupyter
-# #WORKDIR /
-# RUN git clone https://github.com/espnet/espnet.git
-# #RUN git clone https://github.com/kaldi-asr/kaldi.git
-
-# WORKDIR /espnet/tools
-# #RUN ln -s $(pwd)/../../kaldi .
-# RUN ./setup_anaconda.sh anaconda espnet 3.8
-# RUN make
-# #RUN ./setup_python.sh $(command -v python3
-# # # -----------------------------------------------------------------------
+WORKDIR /espnet
+RUN cd tools && \
+    # Setup system Python environment
+    ./setup_python.sh $(command -v python3) && \
+    make -j"$(nproc)" && \
+    ./activate_python.sh && \
+    ./setup_cuda_env.sh /usr/local/cuda && \
+    # Install optional dependencies for ESPNet
+    ./installers/install_warp-ctc.sh && \
+    ./installers/install_warp-transducer.sh && \
+    ./installers/install_pyopenjtalk.sh && \
+    python3 check_install.py
+# -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
-WORKDIR /
-RUN cd /opt/ &&\
-    # Download and unzip OpenCV and opencv_contrib and delete zip files
-    wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-    unzip $OPENCV_VERSION.zip &&\
-    rm $OPENCV_VERSION.zip &&\
-    wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
-    unzip ${OPENCV_VERSION}.zip &&\
-    rm ${OPENCV_VERSION}.zip &&\
-    # Create build folder and switch to it
-    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
-    # Cmake configure
-    cmake \
-        -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
-        -DWITH_CUDA=ON \
-        -DCMAKE_BUILD_TYPE=RELEASE \
-        # Install path will be /usr/local/lib (lib is implicit)
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        .. &&\
-    # Make
-    make -j"$(nproc)" && \
-    # Install to /usr/local/lib
-    make install && \
-    ldconfig &&\
-    # Remove OpenCV sources and build folder
-    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+# WORKDIR /
+# RUN cd /opt/ &&\
+#     # Download and unzip OpenCV and opencv_contrib and delete zip files
+#     wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+#     unzip $OPENCV_VERSION.zip &&\
+#     rm $OPENCV_VERSION.zip &&\
+#     wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+#     unzip ${OPENCV_VERSION}.zip &&\
+#     rm ${OPENCV_VERSION}.zip &&\
+#     # Create build folder and switch to it
+#     mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+#     # Cmake configure
+#     cmake \
+#         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+#         -DWITH_CUDA=ON \
+#         -DCMAKE_BUILD_TYPE=RELEASE \
+#         # Install path will be /usr/local/lib (lib is implicit)
+#         -DCMAKE_INSTALL_PREFIX=/usr/local \
+#         .. &&\
+#     # Make
+#     make -j"$(nproc)" && \
+#     # Install to /usr/local/lib
+#     make install && \
+#     ldconfig &&\
+#     # Remove OpenCV sources and build folder
+#     rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
 # -----------------------------------------------------------------------
 
 # ----------------------------Azure Kinect SDK---------------------------
@@ -150,8 +182,7 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
 # ----------------------------------------------------------------------
 
 # ----------------------------Python Dependencies-----------------------
-RUN python3 -m pip install --upgrade pip && \
-    python3 -m pip install --no-cache-dir\
+RUN python3 -m pip install --no-cache-dir &&\
     torch \
     matplotlib \
     plotly \
@@ -174,7 +205,6 @@ RUN python3 -m pip install --upgrade pip && \
     humanfriendly \
     soundfile \
     typeguard \
-    espnet \
     jupyter
 # ----------------------------------------------------------------------
 
