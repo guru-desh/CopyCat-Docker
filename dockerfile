@@ -7,11 +7,6 @@ FROM nvidia/cuda:11.1-devel-ubuntu18.04
 # Arguments for OpenCV
 ARG OPENCV_VERSION=4.5.0
 
-# Get the number of jobs (which is miniumum of RAM / 2 and number of CPUs)
-#RUN amtmemory=$((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2))
-RUN minimum=$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc) ))
-ENV JOBS=$minimum
-
 # Set timezone to Tokyo (for Naoki)
 ENV TZ=Asia/Tokyo
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -158,7 +153,7 @@ RUN git clone https://github.com/espnet/espnet && \
     # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
     ./configure --shared --use-cuda && \
     make -j clean depend && \
-    make -j ${JOBS}
+    make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))"
 
 # Install Espnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
@@ -166,7 +161,7 @@ WORKDIR /espnet
 RUN cd tools && \
     # Setup system Python environment
     ./setup_python.sh $(command -v python3)
-RUN cd tools && make -j ${JOBS}
+RUN cd tools && make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))"
 RUN cd tools && \
     ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
@@ -198,7 +193,7 @@ RUN cd /opt/ &&\
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j ${JOBS} && \
+    make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))" && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
