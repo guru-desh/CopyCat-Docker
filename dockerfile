@@ -132,7 +132,7 @@ WORKDIR /espnet
 RUN cd tools && \
     # Without setting Python environment.
     rm -f activate_python.sh && touch activate_python.sh
-RUN cd tools && make
+RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
     ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
