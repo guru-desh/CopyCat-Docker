@@ -7,10 +7,6 @@ FROM nvidia/cuda:11.1-devel-ubuntu18.04
 # Arguments for OpenCV
 ARG OPENCV_VERSION=4.5.0
 
-# Set timezone to Tokyo (for Naoki)
-ENV TZ=Asia/Tokyo
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
     # Install Overall Dependencies
@@ -39,12 +35,12 @@ RUN apt-get update && apt-get upgrade -y &&\
         nkf \
         libfreetype6-dev \
     # Install Dependencies for HTK
-    && apt-get install -y libc6-dev-i386 \
+    && apt-get update && apt-get upgrade -y && apt-get install -y libc6-dev-i386 \
         ksh \
         bc \
         libx11-dev \
     # Install Dependencies for OpenCV
-    && apt-get install -y \
+    && apt-get update && apt-get upgrade -y && apt-get install -y \
     python3-pip \
         build-essential \
         yasm \
@@ -76,7 +72,7 @@ RUN apt-get update && apt-get upgrade -y &&\
         python3-pip \
         python3.8-dev \
     # Install dependencies for ESPNet
-    && apt-get -y install --no-install-recommends \ 
+    && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
         gawk \
         libboost-all-dev \
@@ -85,47 +81,22 @@ RUN apt-get update && apt-get upgrade -y &&\
         unzip \
         wget \
         zip \
-    && apt-get clean \
     # Install Dependencies for Azure Kinect SDK
-    && apt-get install -y \
+    && apt-get update && apt-get upgrade -y && apt-get install -y \
         software-properties-common \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 # -----------------------------------------------------------------------
 
-# ----------------------------Python Dependencies------------------------
+# -------------------------------Python Setup----------------------------
 # Set Python 3.8 as default Python and Update pip
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools
-
-RUN python3 -m pip install --no-cache-dir \
-    numpy \
-    torch \
-    matplotlib \
-    plotly \
-    scipy \
-    scikit-learn \
-    pandas \
-    tqdm \
-    pytransform3d \
-    joblib \
-    mediapipe \
-    filterpy \
-    pympi-ling \
-    ffprobe-python \
-    tf-bodypix \
-    tfjs-graph-converter \
-    tensorflow \
-    typing-extensions \
-    kaldiio \
-    humanfriendly \
-    soundfile \
-    typeguard \
-    jupyter
 # -----------------------------------------------------------------------
 
-# -----------------------------------HTK---------------------------------
+# ---------------------------------HTK-----------------------------------
 COPY ./htk ./htk
 COPY ./gt2k ./gt2k
 COPY ./prepare ./htk/prepare
@@ -153,22 +124,37 @@ RUN git clone https://github.com/espnet/espnet && \
     # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
     ./configure --shared --use-cuda && \
     make -j clean depend && \
-    make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))"
+    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
 
 # Install Espnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
 WORKDIR /espnet
 RUN cd tools && \
-    # Setup system Python environment
-    ./setup_python.sh $(command -v python3)
-RUN cd tools && make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))"
+    # Without setting Python environment.
+    rm -f activate_python.sh && touch activate_python.sh
+RUN cd tools && make
 RUN cd tools && \
     ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
-    # Install optional dependencies for ESPNet
+    # Based on running the python3 check_install.py, these packages need to be installed
     ./installers/install_warp-ctc.sh && \
     ./installers/install_warp-transducer.sh && \
     ./installers/install_pyopenjtalk.sh && \
+    ./installers/install_chainer_ctc.sh && \
+    ./installers/install_pyopenjtalk.sh && \
+    ./installers/install_kenlm.sh && \
+    ./installers/install_py3mmseg.sh && \
+    ./installers/install_phonemizer.sh && \
+    ./installers/install_gtn.sh && \
+    ./installers/install_s3prl.sh && \
+    ./installers/install_transformers.sh && \
+    ./installers/install_speechbrain.sh && \
+    ./installers/install_k2.sh && \
+    ./installers/install_longformer.sh && \
+    ./installers/install_longformer.sh && \
+    ./installers/install_longformer.sh && \
+    ./installers/install_pesq.sh && \
+    ./installers/install_beamformit.sh && \
     python3 check_install.py
 # -----------------------------------------------------------------------
 
@@ -212,8 +198,37 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
     python3 -m pip install pyk4a 
 # ----------------------------------------------------------------------
 
-# Future steps:
-# - wget CopyCat Dataset from Dropbox
-# - git clone CopyCat-HTK repo
-# - Fix ESPNet issues
-# Why is there no cuDNN? ( Could NOT find CUDNN (missing: CUDNN_LIBRARY CUDNN_INCLUDE_DIR) (Required is at least version "7.5"))
+# --------------------------Python Dependencies-------------------------
+# Will install all dependencies for the project. ESPnet already installs a majority of them
+# However, pip will just say "requirement installed" if it is already installed
+RUN python3 -m pip install --no-cache-dir \
+    numpy \
+    torch \
+    matplotlib \
+    plotly \
+    scipy \
+    scikit-learn \
+    pandas \
+    tqdm \
+    pytransform3d \
+    joblib \
+    mediapipe \
+    filterpy \
+    pympi-ling \
+    ffprobe-python \
+    tf-bodypix \
+    tfjs-graph-converter \
+    tensorflow \
+    typing-extensions \
+    kaldiio \
+    humanfriendly \
+    soundfile \
+    typeguard \
+    jupyter
+# -----------------------------------------------------------------------
+
+# # Future steps:
+# # - wget CopyCat Dataset from Dropbox
+# # - git clone CopyCat-HTK repo
+# # - Fix ESPNet issues
+# # Why is there no cuDNN? ( Could NOT find CUDNN (missing: CUDNN_LIBRARY CUDNN_INCLUDE_DIR) (Required is at least version "7.5"))
