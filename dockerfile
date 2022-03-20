@@ -1,11 +1,12 @@
-# Source for OpenCV Dependencies: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
+# A good explanation of the job flag for makefiles: https://www.gnu.org/software/make/manual/html_node/Parallel.html
 
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
-FROM nvidia/cuda:11.1-devel-ubuntu18.04
+# Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
-ARG OPENCV_VERSION=4.5.0
+ARG OPENCV_VERSION=4.3.0
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
@@ -67,11 +68,11 @@ RUN apt-get update && apt-get upgrade -y &&\
         libtbb-dev \
         libgtk2.0-dev \
         pkg-config \
-        # ESPNet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3-dev \ 
         python3-pip \
         python3.8-dev \
-    # Install dependencies for ESPNet
+    # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
         gawk \
@@ -81,6 +82,9 @@ RUN apt-get update && apt-get upgrade -y &&\
         unzip \
         wget \
         zip \
+        # Needed for installation of phonemizer (used by ESPnet)
+        libncurses5-dev \
+        libncursesw5-dev \
     # Install Dependencies for Azure Kinect SDK
     && apt-get update && apt-get upgrade -y && apt-get install -y \
         software-properties-common \
@@ -108,9 +112,9 @@ RUN chmod +x prepare
 RUN ./prepare 
 # -----------------------------------------------------------------------
 
-# -------------------------------ESPNET----------------------------------
+# -------------------------------ESPnet----------------------------------
 WORKDIR /
-# Install Kaldi inside of Espnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
+# Install Kaldi inside of ESPnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
 RUN git clone https://github.com/espnet/espnet && \
     cd espnet/tools && \
     git clone https://github.com/kaldi-asr/kaldi.git && \
@@ -126,7 +130,7 @@ RUN git clone https://github.com/espnet/espnet && \
     make -j clean depend && \
     make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
 
-# Install Espnet (source: https://espnet.github.io/espnet/installation.html)
+# Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
 WORKDIR /espnet
 RUN cd tools && \
@@ -134,14 +138,10 @@ RUN cd tools && \
     rm -f activate_python.sh && touch activate_python.sh
 RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
-    ./activate_python.sh && \
+    bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
     # Based on running the python3 check_install.py, these packages need to be installed
-    ./installers/install_warp-ctc.sh && \
-    ./installers/install_warp-transducer.sh && \
-    ./installers/install_pyopenjtalk.sh && \
     ./installers/install_chainer_ctc.sh && \
-    ./installers/install_pyopenjtalk.sh && \
     ./installers/install_kenlm.sh && \
     ./installers/install_py3mmseg.sh && \
     ./installers/install_phonemizer.sh && \
@@ -151,14 +151,17 @@ RUN cd tools && \
     ./installers/install_speechbrain.sh && \
     ./installers/install_k2.sh && \
     ./installers/install_longformer.sh && \
-    ./installers/install_longformer.sh && \
-    ./installers/install_longformer.sh && \
     ./installers/install_pesq.sh && \
     ./installers/install_beamformit.sh && \
+    # Optional packages for ESPnet
+    ./installers/install_warp-ctc.sh && \
+    ./installers/install_warp-transducer.sh && \
+    ./installers/install_pyopenjtalk.sh && \
     python3 check_install.py
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
+#  Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
 WORKDIR /
 RUN cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
@@ -227,8 +230,13 @@ RUN python3 -m pip install --no-cache-dir \
     jupyter
 # -----------------------------------------------------------------------
 
-# # Future steps:
-# # - wget CopyCat Dataset from Dropbox
-# # - git clone CopyCat-HTK repo
-# # - Fix ESPNet issues
-# # Why is there no cuDNN? ( Could NOT find CUDNN (missing: CUDNN_LIBRARY CUDNN_INCLUDE_DIR) (Required is at least version "7.5"))
+# -------------------------------CopyCat---------------------------------
+# Download the CopyCat-HTK repository
+RUN git clone https://github.com/ishanchadha01/CopyCat-HTK.git
+
+# Wget CopyCat Dataset (usint a temporary one)
+RUN mkdir CopyCat_Dataset && cd CopyCat_Dataset && \
+    wget https://www.dropbox.com/sh/o5x1r8diz3t9vis/AADaoXKsQn8y9qp-fN1FFBMaa?dl=1 --content-disposition && \
+    unzip TestDropboxDownloads.zip && \
+    rm TestDropboxDownloads.zip
+# -----------------------------------------------------------------------
