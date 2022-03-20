@@ -161,7 +161,7 @@ RUN cd tools && \
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
-#  Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
+# Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
 WORKDIR /
 RUN cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
@@ -191,18 +191,22 @@ RUN cd /opt/ &&\
 # -----------------------------------------------------------------------
 
 # ----------------------------Azure Kinect SDK---------------------------
-RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+# In order to use apt-add-repository, we need to go back to Python3.6 as the default
+RUN update-alternatives --set python3 /usr/bin/python3.6 && \
+    curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod && \
     apt-get update && \
     ACCEPT_EULA=Y apt-get install k4a-tools -y && \
     apt-get install -y \
         libk4a1.4 \
         libk4a1.4-dev && \
+    update-alternatives --set python3 /usr/bin/python3.8 && \
     python3 -m pip install pyk4a 
-# ----------------------------------------------------------------------
+# # ----------------------------------------------------------------------
 
 # --------------------------Python Dependencies-------------------------
-# Will install all dependencies for the project. ESPnet already installs a majority of them
+# Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
+# ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
 RUN python3 -m pip install --no-cache-dir \
     numpy \
