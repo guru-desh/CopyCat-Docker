@@ -202,9 +202,9 @@ RUN update-alternatives --set python3 /usr/bin/python3.6 && \
         libk4a1.4-dev && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
     python3 -m pip install pyk4a 
-# # ----------------------------------------------------------------------
+# -----------------------------------------------------------------------
 
-# --------------------------Python Dependencies-------------------------
+# --------------------------Python Dependencies--------------------------
 # Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
 # ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
@@ -240,7 +240,7 @@ RUN git clone https://github.com/ishanchadha01/CopyCat-HTK.git
 
 # Wget CopyCat Dataset (usint a temporary one)
 RUN mkdir CopyCat_Dataset && cd CopyCat_Dataset && \
-    wget https://www.dropbox.com/sh/o5x1r8diz3t9vis/AADaoXKsQn8y9qp-fN1FFBMaa?dl=1 --content-disposition && \
-    unzip TestDropboxDownloads.zip && \
-    rm TestDropboxDownloads.zip
+    curl -L https://www.dropbox.com/sh/o5x1r8diz3t9vis/AADaoXKsQn8y9qp-fN1FFBMaa?dl=1 > dataset.zip && \
+    unzip dataset.zip -x / && \
+    rm dataset.zip
 # -----------------------------------------------------------------------
