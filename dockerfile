@@ -128,7 +128,7 @@ RUN git clone https://github.com/espnet/espnet && \
     # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
     ./configure --shared --use-cuda && \
     make -j clean depend && \
-    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
+    make -j 1
 
 # Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
@@ -136,7 +136,7 @@ WORKDIR /espnet
 RUN cd tools && \
     # Without setting Python environment.
     rm -f activate_python.sh && touch activate_python.sh
-RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc))) : 1))"
+RUN cd tools && make -j 1
 RUN cd tools && \
     bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
@@ -182,7 +182,7 @@ RUN cd /opt/ &&\
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]\+$'`/2)) : $(nproc)))" && \
+    make -j 1 && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
