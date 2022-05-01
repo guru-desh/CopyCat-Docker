@@ -235,10 +235,4 @@ RUN python3 -m pip install --no-cache-dir \
 # -------------------------------CopyCat---------------------------------
 # Download the CopyCat-HTK repository
 RUN git clone https://github.com/ishanchadha01/CopyCat-HTK.git
-
-# Wget CopyCat Dataset (usint a temporary one)
-RUN mkdir CopyCat_Dataset && cd CopyCat_Dataset && \
-    curl -L https://www.dropbox.com/sh/yociblcljt0r80c/AADd7laMn-wc_FFsIGxB_PDaa?dl=1 > dataset.zip
-    # unzip dataset.zip -x / && \
-    # rm dataset.zip
 # -----------------------------------------------------------------------
