@@ -234,5 +234,5 @@ RUN python3 -m pip install --no-cache-dir \
 
 # -------------------------------CopyCat---------------------------------
 # Download the CopyCat-HTK repository
-RUN git clone https://github.com/ishanchadha01/CopyCat-HTK.git
+RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
 # -----------------------------------------------------------------------
