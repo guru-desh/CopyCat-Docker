@@ -229,7 +229,8 @@ RUN python3 -m pip install --no-cache-dir \
     humanfriendly \
     soundfile \
     typeguard \
-    jupyter
+    jupyter \
+    p-tqdm
 # -----------------------------------------------------------------------
 
 # -------------------------------CopyCat---------------------------------
