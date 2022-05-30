@@ -8,6 +8,10 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 # Arguments for OpenCV
 ARG OPENCV_VERSION=4.3.0
 
+# Arguments for OpenGL
+ARG VCS_REF
+ARG BUILD_DATE
+
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
     # Install Overall Dependencies
@@ -180,7 +184,7 @@ RUN cd /opt/ &&\
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j"$(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))" && \
+    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
@@ -231,6 +235,42 @@ RUN python3 -m pip install --no-cache-dir \
     typeguard \
     jupyter \
     p-tqdm
+# -----------------------------------------------------------------------
+
+# --------------------------------OpenGL---------------------------------
+# Source: https://github.com/jamesbrink/docker-opengl
+# Install all needed deps and compile the mesa llvmpipe driver from source.
+RUN set -xe; \
+    apk --update add --no-cache --virtual .runtime-deps xvfb llvm5-libs xdpyinfo; \
+    apk add --no-cache --virtual .build-deps llvm-dev build-base zlib-dev glproto xorg-server-dev python-dev; \
+    mkdir -p /var/tmp/build; \
+    cd /var/tmp/build; \
+    wget "https://mesa.freedesktop.org/archive/mesa-18.0.1.tar.gz"; \
+    tar xfv mesa-18.0.1.tar.gz; \
+    rm mesa-18.0.1.tar.gz; \
+    cd mesa-18.0.1; \
+    ./configure --enable-glx=gallium-xlib --with-gallium-drivers=swrast,swr --disable-dri --disable-gbm --disable-egl --enable-gallium-osmesa --prefix=/usr/local; \
+    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"; \
+    make install; \
+    cd .. ; \
+    rm -rf mesa-18.0.1; \
+    apk del .build-deps;
+
+# Copy our entrypoint into the container.
+COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
+
+# Setup our environment variables.
+ENV XVFB_WHD="1920x1080x24"\
+    DISPLAY=":99" \
+    LIBGL_ALWAYS_SOFTWARE="1" \
+    GALLIUM_DRIVER="llvmpipe" \
+    LP_NO_RAST="false" \
+    LP_DEBUG="" \
+    LP_PERF="" \
+    LP_NUM_THREADS=""
+
+# Set the default command.
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # -----------------------------------------------------------------------
 
 # -------------------------------CopyCat---------------------------------
