@@ -138,28 +138,28 @@ WORKDIR /espnet
 RUN cd tools && \
     # Without setting Python environment.
     rm -f activate_python.sh && touch activate_python.sh
-RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
-RUN cd tools && \
-    bash ./activate_python.sh && \
-    ./setup_cuda_env.sh /usr/local/cuda && \
-    # Based on running the python3 check_install.py, these packages need to be installed
-    ./installers/install_chainer_ctc.sh && \
-    ./installers/install_kenlm.sh && \
-    ./installers/install_py3mmseg.sh && \
-    ./installers/install_phonemizer.sh && \
-    ./installers/install_gtn.sh && \
-    ./installers/install_s3prl.sh && \
-    ./installers/install_transformers.sh && \
-    ./installers/install_speechbrain.sh && \
-    ./installers/install_k2.sh && \
-    ./installers/install_longformer.sh && \
-    ./installers/install_pesq.sh && \
-    ./installers/install_beamformit.sh && \
-    # Optional packages for ESPnet
-    ./installers/install_warp-ctc.sh && \
-    ./installers/install_warp-transducer.sh && \
-    ./installers/install_pyopenjtalk.sh && \
-    python3 check_install.py
+# RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
+# RUN cd tools && \
+#     bash ./activate_python.sh && \
+#     ./setup_cuda_env.sh /usr/local/cuda && \
+#     # Based on running the python3 check_install.py, these packages need to be installed
+#     ./installers/install_chainer_ctc.sh && \
+#     ./installers/install_kenlm.sh && \
+#     ./installers/install_py3mmseg.sh && \
+#     ./installers/install_phonemizer.sh && \
+#     ./installers/install_gtn.sh && \
+#     ./installers/install_s3prl.sh && \
+#     ./installers/install_transformers.sh && \
+#     ./installers/install_speechbrain.sh && \
+#     ./installers/install_k2.sh && \
+#     ./installers/install_longformer.sh && \
+#     ./installers/install_pesq.sh && \
+#     ./installers/install_beamformit.sh && \
+#     # Optional packages for ESPnet
+#     ./installers/install_warp-ctc.sh && \
+#     ./installers/install_warp-transducer.sh && \
+#     ./installers/install_pyopenjtalk.sh && \
+#     python3 check_install.py
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
