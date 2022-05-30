@@ -241,8 +241,8 @@ RUN python3 -m pip install --no-cache-dir \
 # Source: https://github.com/jamesbrink/docker-opengl
 # Install all needed deps and compile the mesa llvmpipe driver from source.
 RUN set -xe; \
-    apk --update add --no-cache --virtual .runtime-deps xvfb llvm5-libs xdpyinfo; \
-    apk add --no-cache --virtual .build-deps llvm-dev build-base zlib-dev glproto xorg-server-dev python-dev; \
+    apt-get --update install --no-cache --virtual .runtime-deps xvfb llvm5-libs xdpyinfo; \
+    apt-get install --no-cache --virtual .build-deps llvm-dev build-base zlib-dev glproto xorg-server-dev python-dev; \
     mkdir -p /var/tmp/build; \
     cd /var/tmp/build; \
     wget "https://mesa.freedesktop.org/archive/mesa-18.0.1.tar.gz"; \
@@ -254,7 +254,7 @@ RUN set -xe; \
     make install; \
     cd .. ; \
     rm -rf mesa-18.0.1; \
-    apk del .build-deps;
+    apt-get remove .build-deps;
 
 # Copy our entrypoint into the container.
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
