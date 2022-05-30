@@ -239,37 +239,136 @@ RUN python3 -m pip install --no-cache-dir \
 
 # --------------------------------OpenGL---------------------------------
 # Source: https://github.com/jamesbrink/docker-opengl
-# Install all needed deps and compile the mesa llvmpipe driver from source.
+# Install all needed build deps for Mesa3D
+ARG LLVM_VERSION=9
 RUN set -xe; \
-    apt-get --update install --no-cache --virtual .runtime-deps xvfb llvm5-libs xdpyinfo; \
-    apt-get install --no-cache --virtual .build-deps llvm-dev build-base zlib-dev glproto xorg-server-dev python-dev; \
+    apt-get install -y \
+        autoconf \
+        automake \
+        bison \
+        build-base \
+        cmake \
+        elfutils-dev \
+        expat-dev \
+        flex \
+        gettext \
+        git \
+        glproto \
+        libdrm-dev \
+        libtool \
+        libva-dev \
+        libx11-dev \
+        libxcb-dev \
+        libxdamage-dev \
+        libxext-dev \
+        libxfixes-dev \
+        libxrandr-dev \
+        libxshmfence-dev \
+        libxt-dev \
+        libxvmc-dev \
+        libxxf86vm-dev \
+        llvm${LLVM_VERSION} \
+        llvm${LLVM_VERSION}-dev \
+        makedepend \
+        meson \
+        py-mako \
+        py3-libxml2 \
+        py3-mako \
+        python3 \
+        python3-dev \
+        talloc-dev \
+        wayland-dev \
+        wayland-protocols \
+        xorg-server-dev \
+        xorgproto \
+        zlib-dev \
+        zstd-dev;
+
+# Clone Mesa source repo. (this step caches)
+# Due to ongoing packaging issues we build from git vs tar packages
+# Refer to https://bugs.freedesktop.org/show_bug.cgi?id=107865 
+ARG MESA_VERSION
+RUN set -xe; \
     mkdir -p /var/tmp/build; \
-    cd /var/tmp/build; \
-    wget "https://mesa.freedesktop.org/archive/mesa-18.0.1.tar.gz"; \
-    tar xfv mesa-18.0.1.tar.gz; \
-    rm mesa-18.0.1.tar.gz; \
-    cd mesa-18.0.1; \
-    ./configure --enable-glx=gallium-xlib --with-gallium-drivers=swrast,swr --disable-dri --disable-gbm --disable-egl --enable-gallium-osmesa --prefix=/usr/local; \
-    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"; \
-    make install; \
-    cd .. ; \
-    rm -rf mesa-18.0.1; \
-    apt-get remove .build-deps;
+    cd /var/tmp/build/; \
+    git clone --depth=1 --branch=mesa-${MESA_VERSION} https://gitlab.freedesktop.org/mesa/mesa.git;
+
+# Build Mesa from source.
+ARG BUILD_TYPE=release
+ARG BUILD_OPTIMIZATION=3
+RUN set -xe; \
+    cd /var/tmp/build/mesa; \
+    libtoolize; \
+    if [ "$(uname -m)" ==  "aarch64" ] || [ "$(uname -m)" == "armv7l" ]; \
+    then \
+        galium_drivers=swrast; \
+    else \
+        galium_drivers=swrast,swr; \
+    fi ;\
+    meson \
+        --buildtype=${BUILD_TYPE} \
+        --prefix=/usr/local \
+        --sysconfdir=/etc \
+        -D b_ndebug=true \
+        -D egl=true \
+        -D gallium-nine=false \
+        -D gallium-xvmc=false \
+        -D gbm=true \
+        -D gles1=false \
+        -D gles2=true \
+        -D opengl=true \
+        -D dri-drivers-path=/usr/local/lib/xorg/modules/dri \
+        -D dri-drivers= \
+        -D dri3=true  \
+        -D egl=false \
+        -D gallium-drivers="$galium_drivers" \
+        -D gbm=false \
+        -D glx=dri \
+        -D llvm=true \
+        -D lmsensors=false \
+        -D optimization=${BUILD_OPTIMIZATION} \
+        -D osmesa=gallium  \
+        -D platforms=drm,x11,wayland \
+        -D shared-glapi=true \
+        -D shared-llvm=true \
+        -D vulkan-drivers= \
+        build/; \
+    ninja -C build/ -j $(getconf _NPROCESSORS_ONLN); \
+    ninja -C build/ install; \
+    ninja -C build/ xmlpool-pot xmlpool-update-po xmlpool-gmo;
 
 # Copy our entrypoint into the container.
 COPY ./entrypoint.sh /usr/local/bin/entrypoint.sh
 
-# Setup our environment variables.
-ENV XVFB_WHD="1920x1080x24"\
-    DISPLAY=":99" \
-    LIBGL_ALWAYS_SOFTWARE="1" \
-    GALLIUM_DRIVER="llvmpipe" \
-    LP_NO_RAST="false" \
-    LP_DEBUG="" \
-    LP_PERF="" \
-    LP_NUM_THREADS=""
+# Install runtime dependencies for Mesa and link xorg dri modules
+ARG LLVM_VERSION=9
+RUN set -xe; \
+    apk --update add --no-cache \
+        binutils \
+        expat \
+        llvm${LLVM_VERSION}-libs \
+        setxkbmap \
+        xdpyinfo \
+        xrandr \
+        xvfb \
+        xvfb-run \
+        zstd-libs; \
+    ln -sf /usr/local/lib/xorg/modules/dri/* /usr/lib/xorg/modules/dri/
 
-# Set the default command.
+# Setup our environment variables.
+ENV \
+    DISPLAY=":99" \
+    GALLIUM_DRIVER="llvmpipe" \
+    LD_LIBRARY_PATH="/usr/local/lib:$LD_LIBRARY_PATH" \
+    LIBGL_ALWAYS_SOFTWARE="1" \
+    LP_DEBUG="" \
+    LP_NO_RAST="false" \
+    LP_NUM_THREADS="" \
+    LP_PERF="" \
+    MESA_VERSION="${MESA_VERSION}" \
+    XVFB_WHD="1920x1080x24"
+
+# Set the entrypoint script
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 # -----------------------------------------------------------------------
 
