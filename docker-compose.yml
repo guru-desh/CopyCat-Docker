@@ -1,0 +1,13 @@
+version: '3.7'
+services:
+  DataAug:
+    build: .
+    privileged: true
+    environment:
+      - DISPLAY=unix$DISPLAY
+    volumes:
+      - '/tmp/.X11-unix:/tmp/.X11-unix'
+    image: 'nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04'
+    stdin_open: true
+    tty: true
+    command: bash
