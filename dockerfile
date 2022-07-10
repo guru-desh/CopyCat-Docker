@@ -34,6 +34,7 @@ RUN apt-get update && apt-get upgrade -y &&\
         vim \
         curl \
         nkf \
+        nano \
         libfreetype6-dev \
     # Install Dependencies for HTK
     && apt-get update && apt-get upgrade -y && apt-get install -y libc6-dev-i386 \
@@ -219,7 +220,7 @@ RUN python3 -m pip install --no-cache-dir \
     tqdm \
     pytransform3d \
     joblib \
-    # mediapipe \
+    mediapipe \
     filterpy \
     pympi-ling \
     ffprobe-python \
