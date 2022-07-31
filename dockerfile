@@ -8,6 +8,7 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
 ARG OPENCV_VERSION=4.3.0
+ARG NUM_JOBS="$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
@@ -96,6 +97,12 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 
     update-alternatives --set python /usr/bin/python3.8 && \
     python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools
+
+# Install Miniconda
+ENV CONDA_DIR /opt/conda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda
+ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
 # ---------------------------------HTK-----------------------------------
@@ -126,15 +133,15 @@ RUN git clone https://github.com/espnet/espnet && \
     # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
     ./configure --shared --use-cuda && \
     make -j clean depend && \
-    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
+    make -j ${NUM_JOBS}
 
 # Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
 WORKDIR /espnet
 RUN cd tools && \
     # Setting up system Python environment
-    ./setup_venv.sh $(command -v python3)
-RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
+    ./setup_anaconda.sh ${CONDA_DIR} espnet 3.8
+RUN cd tools && make -j ${NUM_JOBS}
 RUN cd tools && \
     bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
@@ -181,7 +188,7 @@ RUN cd /opt/ &&\
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
+    make -j ${NUM_JOBS} && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
