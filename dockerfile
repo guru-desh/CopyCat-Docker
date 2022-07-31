@@ -6,7 +6,9 @@
 FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
+ARG DEBIAN_FRONTEND=noninteractive
 ARG OPENCV_VERSION=4.3.0
+ARG NUM_JOBS="$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
@@ -36,6 +38,7 @@ RUN apt-get update && apt-get upgrade -y &&\
         nkf \
         nano \
         libfreetype6-dev \
+        software-properties-common \
     # Install Dependencies for HTK
     && apt-get update && apt-get upgrade -y && apt-get install -y libc6-dev-i386 \
         ksh \
@@ -81,9 +84,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         # Needed for installation of phonemizer (used by ESPnet)
         libncurses5-dev \
         libncursesw5-dev \
-    # Install Dependencies for Azure Kinect SDK
-    && apt-get update && apt-get upgrade -y && apt-get install -y \
-        software-properties-common \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 # -----------------------------------------------------------------------
 
@@ -114,51 +114,49 @@ RUN ./prepare
 # -------------------------------ESPnet----------------------------------
 WORKDIR /
 # Install Kaldi inside of ESPnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
-RUN git clone https://github.com/espnet/espnet
-    # cd espnet/tools && \
-    # git clone https://github.com/kaldi-asr/kaldi.git && \
-    # # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
-    # ./kaldi/tools/extras/install_mkl.sh && \
-    # cd kaldi/tools && \
-    # # Could not use -j due to packages not compiling. Removing -j fixed the issue: https://github.com/kaldi-asr/kaldi/issues/3987
-    # make && \
-    # ./extras/install_irstlm.sh && \
-    # cd ../src && \
-    # # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
-    # ./configure --shared --use-cuda && \
-    # make -j clean depend && \
-    # make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
+RUN git clone https://github.com/espnet/espnet && \
+    cd espnet/tools && \
+    git clone https://github.com/kaldi-asr/kaldi.git && \
+    # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
+    ./kaldi/tools/extras/install_mkl.sh && \
+    cd kaldi/tools && \
+    # Could not use -j due to packages not compiling. Removing -j fixed the issue: https://github.com/kaldi-asr/kaldi/issues/3987
+    make && \
+    ./extras/install_irstlm.sh && \
+    cd ../src && \
+    # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
+    ./configure --shared --use-cuda && \
+    make -j clean depend && \
+    make -j {NUM_JOBS}
 
 # Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
-# WORKDIR /espnet
-# RUN cd tools && \
-#     # Without setting Python environment.
-#     rm -f activate_python.sh && touch activate_python.sh && \
-#     # Must pip install this to avoid errors
-#     python3 -m pip install chainer==6.0.0
-# RUN cd tools && make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
-# RUN cd tools && \
-#     bash ./activate_python.sh && \
-#     ./setup_cuda_env.sh /usr/local/cuda && \
-#     # Based on running the python3 check_install.py, these packages need to be installed
-#     ./installers/install_chainer_ctc.sh && \
-#     ./installers/install_kenlm.sh && \
-#     ./installers/install_py3mmseg.sh && \
-#     ./installers/install_phonemizer.sh && \
-#     ./installers/install_gtn.sh && \
-#     ./installers/install_s3prl.sh && \
-#     ./installers/install_transformers.sh && \
-#     ./installers/install_speechbrain.sh && \
-#     ./installers/install_k2.sh && \
-#     ./installers/install_longformer.sh && \
-#     ./installers/install_pesq.sh && \
-#     ./installers/install_beamformit.sh && \
-#     # Optional packages for ESPnet
-#     ./installers/install_warp-ctc.sh && \
-#     ./installers/install_warp-transducer.sh && \
-#     ./installers/install_pyopenjtalk.sh && \
-#     python3 check_install.py
+WORKDIR /espnet
+RUN cd tools && \
+    # Setting up system Python environment
+    ./setup_python.sh $(command -v python3)
+RUN cd tools && make -j{NUM_JOBS}
+RUN cd tools && \
+    bash ./activate_python.sh && \
+    ./setup_cuda_env.sh /usr/local/cuda && \
+    # Based on running the python3 check_install.py, these packages need to be installed
+    ./installers/install_chainer_ctc.sh && \
+    ./installers/install_kenlm.sh && \
+    ./installers/install_py3mmseg.sh && \
+    ./installers/install_phonemizer.sh && \
+    ./installers/install_gtn.sh && \
+    ./installers/install_s3prl.sh && \
+    ./installers/install_transformers.sh && \
+    ./installers/install_speechbrain.sh && \
+    ./installers/install_k2.sh && \
+    ./installers/install_longformer.sh && \
+    ./installers/install_pesq.sh && \
+    ./installers/install_beamformit.sh && \
+    # Optional packages for ESPnet
+    ./installers/install_warp-ctc.sh && \
+    ./installers/install_warp-transducer.sh && \
+    ./installers/install_pyopenjtalk.sh && \
+    python3 check_install.py
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
@@ -178,12 +176,13 @@ RUN cd /opt/ &&\
     cmake \
         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
         -DWITH_CUDA=ON \
+        -DCUDA_ARCH_BIN=6.1,7.0,7.5,8.0,8.6 \
         -DCMAKE_BUILD_TYPE=RELEASE \
         # Install path will be /usr/local/lib (lib is implicit)
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j"$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
+    make -j {NUM_JOBS} && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
@@ -233,6 +232,8 @@ RUN python3 -m pip install --no-cache-dir \
     soundfile \
     typeguard \
     jupyter \
+    numba \
+    cupy \
     p-tqdm
 # -----------------------------------------------------------------------
 
