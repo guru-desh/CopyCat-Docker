@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -88,15 +88,13 @@ RUN apt-get update && apt-get upgrade -y &&\
 
 # -------------------------------Python Setup----------------------------
 # Set Python 3.8 as default Python and Update pip
-# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-#     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
-#     update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
-#     update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
-#     update-alternatives --set python3 /usr/bin/python3.8 && \
-#     update-alternatives --set python /usr/bin/python3.8 && \
-#     python3 -m pip install --upgrade pip && \
-#     python3 -m pip install --upgrade setuptools
-RUN python3 -m pip install --upgrade pip && \
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
+    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
+    update-alternatives --set python3 /usr/bin/python3.8 && \
+    update-alternatives --set python /usr/bin/python3.8 && \
+    python3 -m pip install --upgrade pip && \
     python3 -m pip install --upgrade setuptools
 # -----------------------------------------------------------------------
 
@@ -135,7 +133,7 @@ RUN git clone https://github.com/espnet/espnet && \
 WORKDIR /espnet
 RUN cd tools && \
     # Setting up system Python environment
-    ./setup_python.sh $(command -v python3)
+    ./setup_venv.sh $(command -v python3)
 RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
     bash ./activate_python.sh && \
