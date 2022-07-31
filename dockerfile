@@ -8,7 +8,6 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
 ARG OPENCV_VERSION=4.3.0
-ARG NUM_JOBS="$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
@@ -127,13 +126,13 @@ RUN git clone https://github.com/espnet/espnet && \
     ./kaldi/tools/extras/install_mkl.sh && \
     cd kaldi/tools && \
     # Could not use -j due to packages not compiling. Removing -j fixed the issue: https://github.com/kaldi-asr/kaldi/issues/3987
-    make && \
+    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     ./extras/install_irstlm.sh && \
     cd ../src && \
     # Run configure script with the fix from this source: https://github.com/kaldi-asr/kaldi/issues/4391
     ./configure --shared --use-cuda && \
     make -j clean depend && \
-    make -j ${NUM_JOBS}
+    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 
 # Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
@@ -141,7 +140,7 @@ WORKDIR /espnet
 RUN cd tools && \
     # Setting up system Python environment
     ./setup_anaconda.sh ${CONDA_DIR} espnet 3.8
-RUN cd tools && make -j ${NUM_JOBS}
+RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
     bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
@@ -170,10 +169,10 @@ RUN cd tools && \
 WORKDIR /
 RUN cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
-    wget https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+    wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
     unzip $OPENCV_VERSION.zip &&\
     rm $OPENCV_VERSION.zip &&\
-    wget https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+    wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
     unzip ${OPENCV_VERSION}.zip &&\
     rm ${OPENCV_VERSION}.zip &&\
     # Create build folder and switch to it
