@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -66,11 +66,10 @@ RUN apt-get update && apt-get upgrade -y &&\
         libswscale-dev \
         libeigen3-dev \
         libgtk2.0-dev \
-        # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
-        python3-dev \ 
-        python3-pip \
-        python3.8-dev \
-        python3-venv \
+        # # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        # python3-dev \ 
+        # python3-pip \
+        # python3.8-dev \
     # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
@@ -99,13 +98,13 @@ RUN apt-get update && apt-get upgrade -y &&\
 #     python3 -m pip install numpy
 
 # Install Miniconda
-# ENV CONDA_DIR /opt/conda
-# RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-#     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-#     # Needed for chainer_ctc install
-#     /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
-#     /opt/conda/bin/python3 -m pip install numpy
-# ENV PATH=$CONDA_DIR/bin:$PATH
+ENV CONDA_DIR /opt/conda
+RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    # Needed for chainer_ctc install
+    /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
+    /opt/conda/bin/python3 -m pip install numpy
+ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
 # ---------------------------------HTK-----------------------------------
@@ -140,14 +139,10 @@ RUN git clone https://github.com/espnet/espnet && \
 
 # Install ESPnet (source: https://espnet.github.io/espnet/installation.html)
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
-WORKDIR /espnet
-RUN cd tools && \
-    # Setting up system Python environment
-    ./setup_python.sh $(command -v python3)
-    # ./setup_anaconda.sh ${CONDA_DIR} espnet 3.8
-RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
-RUN cd tools && \
-    bash ./activate_python.sh && \
+WORKDIR /espnet/tools
+# Setting up system Python environment
+RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
+    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     ./setup_cuda_env.sh /usr/local/cuda && \
     # Based on running the python3 check_install.py, these packages need to be installed
     ./installers/install_chainer_ctc.sh && \
@@ -202,6 +197,7 @@ RUN cd /opt/ &&\
 
 # ----------------------------Azure Kinect SDK---------------------------
 # In order to use apt-add-repository, we need to go back to Python3.6 as the default
+WORKDIR /espnet/tools
 RUN update-alternatives --set python3 /usr/bin/python3.6 && \
     curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod && \
@@ -249,5 +245,6 @@ RUN bash ./activate_python.sh && python3 -m pip install --no-cache-dir \
 
 # -------------------------------CopyCat---------------------------------
 # Download the CopyCat-HTK repository
+WORKDIR /
 RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
 # -----------------------------------------------------------------------
