@@ -94,17 +94,16 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 
     update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
     update-alternatives --set python /usr/bin/python3.8 && \
-    python3 -m pip install --upgrade pip setuptools && \
-    python3 -m pip install numpy
+    python3 -m pip install --upgrade pip setuptools
 
 # Install Miniconda
-ENV CONDA_DIR /opt/conda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
-    # Needed for chainer_ctc install
-    /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
-    /opt/conda/bin/python3 -m pip install numpy
-ENV PATH=$CONDA_DIR/bin:$PATH
+# ENV CONDA_DIR /opt/conda
+# RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+#     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+#     # Needed for chainer_ctc install
+#     /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
+#     /opt/conda/bin/python3 -m pip install numpy
+# ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
 # ---------------------------------HTK-----------------------------------
@@ -141,8 +140,8 @@ RUN git clone https://github.com/espnet/espnet && \
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
 WORKDIR /espnet
 RUN cd tools && \
-    # Setting up system Python environment
-    ./setup_anaconda.sh ${CONDA_DIR} espnet 3.8
+    # Not setting up system Python environment
+    rm -f activate_python.sh && touch activate_python.sh
 RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
     bash ./activate_python.sh && \
@@ -210,7 +209,7 @@ RUN update-alternatives --set python3 /usr/bin/python3.6 && \
         libk4a1.4 \
         libk4a1.4-dev && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
-    bash ./activate_python.sh && python3 -m pip install pyk4a 
+    python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
 # --------------------------Python Dependencies--------------------------
