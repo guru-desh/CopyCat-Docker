@@ -103,7 +103,6 @@ RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     # Needed for chainer_ctc install
     /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
-    /opt/conda/bin/python3 -m pip install numpy
 ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
@@ -157,10 +156,15 @@ RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
     ./installers/install_longformer.sh && \
     ./installers/install_pesq.sh && \
     ./installers/install_beamformit.sh && \
+    ./installers/install_tdmelodic_pyopenjtalk.sh && \
+    ./installers/install_fairseq.sh && \
+    ./installers/install_sctk.sh && \
+    ./installers/install_sph2pipe.sh && \
     # Optional packages for ESPnet
     ./installers/install_warp-ctc.sh && \
     ./installers/install_warp-transducer.sh && \
     ./installers/install_pyopenjtalk.sh && \
+    python3 -m pip install cupy-cuda102 && \
     python3 check_install.py
 # -----------------------------------------------------------------------
 
@@ -170,10 +174,10 @@ WORKDIR /
 RUN cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
     wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-    unzip $OPENCV_VERSION.zip &&\
+    unzip -qq $OPENCV_VERSION.zip &&\
     rm $OPENCV_VERSION.zip &&\
     wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
-    unzip ${OPENCV_VERSION}.zip &&\
+    unzip -qq ${OPENCV_VERSION}.zip &&\
     rm ${OPENCV_VERSION}.zip &&\
     # Create build folder and switch to it
     mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
