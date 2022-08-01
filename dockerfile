@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.1-cudnn8-devel-ubuntu20.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -70,6 +70,7 @@ RUN apt-get update && apt-get upgrade -y &&\
         python3-dev \ 
         python3-pip \
         python3.8-dev \
+        python3-venv \
     # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
@@ -88,13 +89,14 @@ RUN apt-get update && apt-get upgrade -y &&\
 
 # -------------------------------Python Setup----------------------------
 # Set Python 3.8 as default Python and Update pip
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-    update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
-    update-alternatives --set python3 /usr/bin/python3.8 && \
-    update-alternatives --set python /usr/bin/python3.8 && \
-    python3 -m pip install --upgrade pip setuptools
+# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
+#     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
+#     update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
+#     update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
+#     update-alternatives --set python3 /usr/bin/python3.8 && \
+#     update-alternatives --set python /usr/bin/python3.8 && \
+#     python3 -m pip install --upgrade pip setuptools && \
+#     python3 -m pip install numpy
 
 # Install Miniconda
 # ENV CONDA_DIR /opt/conda
@@ -140,14 +142,14 @@ RUN git clone https://github.com/espnet/espnet && \
 # Additional resource: https://github.com/espnet/interspeech2019-tutorial/blob/master/notebooks/meetup/an4_meetup.ipynb
 WORKDIR /espnet
 RUN cd tools && \
-    # Not setting up system Python environment
-    rm -f activate_python.sh && touch activate_python.sh
+    # Setting up system Python environment
+    ./setup_python.sh $(command -v python3)
+    # ./setup_anaconda.sh ${CONDA_DIR} espnet 3.8
 RUN cd tools && make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))"
 RUN cd tools && \
     bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
     # Based on running the python3 check_install.py, these packages need to be installed
-    bash ./activate_python.sh && \
     ./installers/install_chainer_ctc.sh && \
     ./installers/install_kenlm.sh && \
     ./installers/install_py3mmseg.sh && \
@@ -209,7 +211,7 @@ RUN update-alternatives --set python3 /usr/bin/python3.6 && \
         libk4a1.4 \
         libk4a1.4-dev && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
-    python3 -m pip install pyk4a 
+    bash ./activate_python.sh && python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
 # --------------------------Python Dependencies--------------------------
