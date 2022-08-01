@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
+FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -68,8 +68,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3-dev \ 
         python3-pip \
-        # Needed for Kaldi installation
-        python2.7 \
     # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
@@ -124,8 +122,7 @@ RUN ./prepare
 WORKDIR /
 # Install Kaldi inside of ESPnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
 RUN git clone https://github.com/espnet/espnet && \
-    cd espnet && git checkout 6cca0063b3bc885432681ade58831779225acbb0 && \
-    cd tools && \
+    cd espnet/tools && \
     git clone https://github.com/kaldi-asr/kaldi.git && \
     # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
     ./kaldi/tools/extras/install_mkl.sh && \
@@ -188,7 +185,7 @@ RUN cd /opt/ &&\
     cmake \
         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
         -DWITH_CUDA=ON \
-        -DCUDA_ARCH_BIN=6.1,7.0,7.5,8.0,8.6 \
+        -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
         -DCMAKE_BUILD_TYPE=RELEASE \
         -DCUDNN_VERSION=8.0 \
     # Install path will be /usr/local/lib (lib is implicit)
@@ -206,15 +203,13 @@ RUN cd /opt/ &&\
 # ----------------------------Azure Kinect SDK---------------------------
 # In order to use apt-add-repository, we need to go back to Python3.6 as the default
 WORKDIR /espnet/tools
-RUN update-alternatives --set python3 /usr/bin/python3.6 && \
-    curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
+RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod && \
     apt-get update && \
     ACCEPT_EULA=Y apt-get install k4a-tools -y && \
     apt-get install -y \
         libk4a1.4 \
         libk4a1.4-dev && \
-    update-alternatives --set python3 /usr/bin/python3.8 && \
     bash ./activate_python.sh && python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
