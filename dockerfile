@@ -102,7 +102,7 @@ ENV CONDA_DIR /opt/conda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     # Needed for chainer_ctc install
-    /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
+    /opt/conda/bin/python3 -m pip install --upgrade pip setuptools
 ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
