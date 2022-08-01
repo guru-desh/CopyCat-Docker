@@ -23,7 +23,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         wget \
         sox \
         libtool \
-        git \
         subversion \
         zlib1g-dev \
         gfortran \
@@ -66,10 +65,10 @@ RUN apt-get update && apt-get upgrade -y &&\
         libswscale-dev \
         libeigen3-dev \
         libgtk2.0-dev \
-        # # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
-        # python3-dev \ 
-        # python3-pip \
-        # python3.8-dev \
+        # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        python3-dev \ 
+        python3-pip \
+        python-software-properties \
     # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
@@ -96,6 +95,8 @@ RUN apt-get update && apt-get upgrade -y &&\
 #     update-alternatives --set python /usr/bin/python3.8 && \
 #     python3 -m pip install --upgrade pip setuptools && \
 #     python3 -m pip install numpy
+
+RUN add-apt-repository ppa:git-core/ppa -y && apt-get update && apt-get install git -y
 
 # Install Miniconda
 ENV CONDA_DIR /opt/conda
