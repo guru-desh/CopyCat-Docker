@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.6.1-cudnn8-devel-ubuntu20.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -185,14 +185,14 @@ RUN cd /opt/ &&\
     cmake \
         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
         -DWITH_CUDA=ON \
-        -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
+        -DCUDA_ARCH_BIN=6.1,7.0,7.5,8.0,8.6 \
         -DCMAKE_BUILD_TYPE=RELEASE \
         -DCUDNN_VERSION=8.0 \
     # Install path will be /usr/local/lib (lib is implicit)
         -DCMAKE_INSTALL_PREFIX=/usr/local \
         .. &&\
     # Make
-    make -j ${NUM_JOBS} && \
+    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     # Install to /usr/local/lib
     make install && \
     ldconfig && \
@@ -219,7 +219,7 @@ RUN update-alternatives --set python3 /usr/bin/python3.6 && \
 # Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
 # ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
-RUN bash ./activate_python.sh && python3 -m pip install --no-cache-dir \
+RUN bash ./activate_python.sh && python3 -m pip install \
     numpy \
     torch \
     matplotlib \
