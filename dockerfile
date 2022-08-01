@@ -145,6 +145,7 @@ RUN cd tools && \
     bash ./activate_python.sh && \
     ./setup_cuda_env.sh /usr/local/cuda && \
     # Based on running the python3 check_install.py, these packages need to be installed
+    bash ./activate_python.sh && \
     ./installers/install_chainer_ctc.sh && \
     ./installers/install_kenlm.sh && \
     ./installers/install_py3mmseg.sh && \
@@ -206,14 +207,14 @@ RUN update-alternatives --set python3 /usr/bin/python3.6 && \
         libk4a1.4 \
         libk4a1.4-dev && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
-    python3 -m pip install pyk4a 
+    bash ./activate_python.sh && python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
 # --------------------------Python Dependencies--------------------------
 # Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
 # ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
-RUN python3 -m pip install --no-cache-dir \
+RUN bash ./activate_python.sh && python3 -m pip install --no-cache-dir \
     numpy \
     torch \
     matplotlib \
