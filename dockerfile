@@ -94,13 +94,16 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 
     update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
     update-alternatives --set python3 /usr/bin/python3.8 && \
     update-alternatives --set python /usr/bin/python3.8 && \
-    python3 -m pip install --upgrade pip && \
-    python3 -m pip install --upgrade setuptools
+    python3 -m pip install --upgrade pip setuptools && \
+    python3 -m pip install numpy
 
 # Install Miniconda
 ENV CONDA_DIR /opt/conda
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
-    /bin/bash ~/miniconda.sh -b -p /opt/conda
+    /bin/bash ~/miniconda.sh -b -p /opt/conda && \
+    # Needed for chainer_ctc install
+    /opt/conda/bin/python3 -m pip install --upgrade pip setuptools && \
+    /opt/conda/bin/python3 -m pip install numpy
 ENV PATH=$CONDA_DIR/bin:$PATH
 # -----------------------------------------------------------------------
 
