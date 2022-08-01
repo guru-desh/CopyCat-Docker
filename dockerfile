@@ -68,7 +68,6 @@ RUN apt-get update && apt-get upgrade -y &&\
         # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3-dev \ 
         python3-pip \
-        python-software-properties \
     # Install dependencies for ESPnet
     && apt-get update && apt-get upgrade -y && apt-get -y install --no-install-recommends \ 
         apt-utils \
