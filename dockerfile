@@ -3,7 +3,7 @@
 # Base image is from Ubuntu 18.04 that has CUDA 11.1 installed
 # This is because Azure Kinect SDK only has official releases for Ubuntu 18.04
 # Changed CUDA to 10.2 because of nvcc error when building chainer-ctc, warp-transducer for ESPnet. Fix was to downgrade from CUDA 11 to CUDA 10.2: https://github.com/espnet/espnet/issues/2177
-FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
+FROM nvidia/cuda:11.0.3-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
@@ -164,7 +164,7 @@ RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
     ./installers/install_warp-ctc.sh && \
     ./installers/install_warp-transducer.sh && \
     ./installers/install_pyopenjtalk.sh && \
-    python3 -m pip install cupy-cuda102 && \
+    python3 -m pip install cupy-cuda110 && \
     python3 check_install.py
 # -----------------------------------------------------------------------
 
