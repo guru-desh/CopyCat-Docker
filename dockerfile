@@ -124,7 +124,8 @@ RUN ./prepare
 WORKDIR /
 # Install Kaldi inside of ESPnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
 RUN git clone https://github.com/espnet/espnet && \
-    cd espnet/tools && \
+    cd espnet && git checkout 6cca0063b3bc885432681ade58831779225acbb0 && \
+    cd tools && \
     git clone https://github.com/kaldi-asr/kaldi.git && \
     # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
     ./kaldi/tools/extras/install_mkl.sh && \
