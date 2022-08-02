@@ -65,7 +65,9 @@ RUN apt-get update && apt-get upgrade -y &&\
         libswscale-dev \
         libeigen3-dev \
         libgtk2.0-dev \
-        # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        # Installs numpy for Python 2.7
+        python-numpy \
+    # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3-dev \ 
         python3-pip \
     # Install dependencies for ESPnet
@@ -208,11 +210,11 @@ RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
 # -------------------------------OpenCV----------------------------------
 # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
 WORKDIR /
-RUN cd /opt/ &&\
+RUN bash ./activate_python.sh && cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
     wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-    unzip -qq $OPENCV_VERSION.zip &&\
-    rm $OPENCV_VERSION.zip &&\
+    unzip -qq ${OPENCV_VERSION}.zip &&\
+    rm ${OPENCV_VERSION}.zip &&\
     wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
     unzip -qq ${OPENCV_VERSION}.zip &&\
     rm ${OPENCV_VERSION}.zip &&\
