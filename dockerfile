@@ -7,7 +7,7 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
-ARG OPENCV_VERSION=4.2.0
+ARG OPENCV_VERSION=4.5.0
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
@@ -85,16 +85,6 @@ RUN apt-get update && apt-get upgrade -y &&\
 # -----------------------------------------------------------------------
 
 # -------------------------------Python Setup----------------------------
-# Set Python 3.8 as default Python and Update pip
-# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.8 1 && \
-#     update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 2 && \
-#     update-alternatives --install /usr/bin/python python /usr/bin/python3.8 1 && \
-#     update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2 && \
-#     update-alternatives --set python3 /usr/bin/python3.8 && \
-#     update-alternatives --set python /usr/bin/python3.8 && \
-#     python3 -m pip install --upgrade pip setuptools && \
-#     python3 -m pip install numpy
-
 RUN add-apt-repository ppa:git-core/ppa -y && apt-get update && apt-get install git -y
 
 # Install Miniconda
@@ -164,40 +154,7 @@ RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
     ./installers/install_warp-ctc.sh && \
     ./installers/install_warp-transducer.sh && \
     ./installers/install_pyopenjtalk.sh && \
-    python3 -m pip install cupy-cuda102 && \
     python3 check_install.py
-# -----------------------------------------------------------------------
-
-# -------------------------------OpenCV----------------------------------
-# Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
-WORKDIR /
-RUN cd /opt/ &&\
-    # Download and unzip OpenCV and opencv_contrib and delete zip files
-    wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-    unzip -qq $OPENCV_VERSION.zip &&\
-    rm $OPENCV_VERSION.zip &&\
-    wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
-    unzip -qq ${OPENCV_VERSION}.zip &&\
-    rm ${OPENCV_VERSION}.zip &&\
-    # Create build folder and switch to it
-    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
-    # Cmake configure
-    cmake \
-        -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
-        -DWITH_CUDA=ON \
-        -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
-        -DCMAKE_BUILD_TYPE=RELEASE \
-        -DCUDNN_VERSION=8.0 \
-    # Install path will be /usr/local/lib (lib is implicit)
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
-        .. &&\
-    # Make
-    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
-    # Install to /usr/local/lib
-    make install && \
-    ldconfig && \
-    # Remove OpenCV sources and build folder
-    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
 # -----------------------------------------------------------------------
 
 # ----------------------------Azure Kinect SDK---------------------------
@@ -242,8 +199,42 @@ RUN bash ./activate_python.sh && python3 -m pip install \
     typeguard \
     jupyter \
     numba \
-    cupy \
+    cupy-cuda102 \
     p-tqdm
+RUN python3 -m pip uninstall opencv-contrib-python==4.6.0.66
+# -----------------------------------------------------------------------
+
+
+# -------------------------------OpenCV----------------------------------
+# Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
+WORKDIR /
+RUN cd /opt/ &&\
+    # Download and unzip OpenCV and opencv_contrib and delete zip files
+    wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+    unzip -qq $OPENCV_VERSION.zip &&\
+    rm $OPENCV_VERSION.zip &&\
+    wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+    unzip -qq ${OPENCV_VERSION}.zip &&\
+    rm ${OPENCV_VERSION}.zip &&\
+    # Create build folder and switch to it
+    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+    # Cmake configure
+    cmake \
+        -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+        -DWITH_CUDA=ON \
+        -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
+        -DCMAKE_BUILD_TYPE=RELEASE \
+        -DCUDNN_VERSION=8.0 \
+    # Install path will be /usr/local/lib (lib is implicit)
+        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        .. &&\
+    # Make
+    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
+    # Install to /usr/local/lib
+    make install && \
+    ldconfig && \
+    # Remove OpenCV sources and build folder
+    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
 # -----------------------------------------------------------------------
 
 # -------------------------------CopyCat---------------------------------
