@@ -210,7 +210,7 @@ RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
 # -------------------------------OpenCV----------------------------------
 # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
 WORKDIR /
-RUN bash ./activate_python.sh && cd /opt/ &&\
+RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
     wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
     unzip -qq ${OPENCV_VERSION}.zip &&\
