@@ -7,7 +7,7 @@ FROM nvidia/cuda:10.2-cudnn8-devel-ubuntu18.04
 
 # Arguments for OpenCV
 ARG DEBIAN_FRONTEND=noninteractive
-ARG OPENCV_VERSION=4.3.0
+ARG OPENCV_VERSION=4.2.0
 
 # ----------------------------Linux Dependencies-------------------------
 RUN apt-get update && apt-get upgrade -y &&\
