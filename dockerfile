@@ -201,7 +201,7 @@ RUN bash ./activate_python.sh && python3 -m pip install \
     numba \
     cupy-cuda102 \
     p-tqdm
-RUN python3 -m pip uninstall opencv-contrib-python==4.6.0.66
+RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
 # -----------------------------------------------------------------------
 
 
