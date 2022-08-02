@@ -223,12 +223,16 @@ RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
     # Cmake configure
     cmake \
         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+        -DBUILD_opencv_python2=OFF \
+        -DBUILD_opencv_python3=ON \
         -DWITH_CUDA=ON \
         -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
         -DCMAKE_BUILD_TYPE=RELEASE \
         -DCUDNN_VERSION=8.0 \
-    # Install path will be /usr/local/lib (lib is implicit)
-        -DCMAKE_INSTALL_PREFIX=/usr/local \
+        -DPYTHON3_LIBRARY=/opt/conda/lib/python3.8 \
+        -DPYTHON3_INCLUDE_DIR=/opt/conda/include/python3.8 \
+        -DPYTHON3_EXECUTABLE=/opt/conda/bin/python \
+        -DPYTHON3_PACKAGES_PATH=/opt/conda/lib/python3.8/site-packages \
         .. &&\
     # Make
     make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
