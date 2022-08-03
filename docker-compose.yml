@@ -12,3 +12,10 @@ services:
     stdin_open: true
     tty: true
     command: bash
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
