@@ -175,41 +175,6 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
     bash ./activate_python.sh && python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
-# --------------------------Python Dependencies--------------------------
-# Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
-# ESPnet already installs a majority of them
-# However, pip will just say "requirement installed" if it is already installed
-RUN bash ./activate_python.sh && python3 -m pip install \
-    numpy \
-    torch \
-    matplotlib \
-    plotly \
-    scipy \
-    scikit-learn \
-    pandas \
-    tqdm \
-    pytransform3d \
-    joblib \
-    mediapipe \
-    filterpy \
-    pympi-ling \
-    ffprobe-python \
-    tf-bodypix \
-    tfjs-graph-converter \
-    tensorflow \
-    typing-extensions \
-    kaldiio \
-    humanfriendly \
-    soundfile \
-    typeguard \
-    jupyter \
-    numba \
-    cupy-cuda102 \
-    p-tqdm
-RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
-# -----------------------------------------------------------------------
-
-
 # -------------------------------OpenCV----------------------------------
 # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
 WORKDIR /
@@ -244,6 +209,40 @@ RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
     ldconfig && \
     # Remove OpenCV sources and build folder
     rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+# -----------------------------------------------------------------------
+
+# --------------------------Python Dependencies--------------------------
+# Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
+# ESPnet already installs a majority of them
+# However, pip will just say "requirement installed" if it is already installed
+RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
+    numpy \
+    torch \
+    matplotlib \
+    plotly \
+    scipy \
+    scikit-learn \
+    pandas \
+    tqdm \
+    pytransform3d \
+    joblib \
+    mediapipe \
+    filterpy \
+    pympi-ling \
+    ffprobe-python \
+    tensorflow-gpu==2.4.0 \
+    tf-bodypix \
+    tfjs-graph-converter \
+    typing-extensions \
+    kaldiio \
+    humanfriendly \
+    soundfile \
+    typeguard \
+    jupyter \
+    numba \
+    cupy-cuda102 \
+    p-tqdm
+RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
 # -----------------------------------------------------------------------
 
 # -------------------------------CopyCat---------------------------------
