@@ -42,6 +42,8 @@ RUN apt-get update && apt-get upgrade -y &&\
         ksh \
         bc \
         libx11-dev \
+        # Since Guru has a Windows Computer, he needs to convert the Windows Line Endings to Unix Line Endings
+        dos2unix \ 
     # Install Dependencies for OpenCV
     && apt-get update && apt-get upgrade -y && apt-get install -y \
     python3-pip \
@@ -105,9 +107,10 @@ COPY ./prepare ./htk/prepare
 # Deleted LetterLevel and WordLevel folders because they are not used in this project
 
 WORKDIR /htk
-RUN chmod +x prepare
+RUN dos2unix prepare && chmod +x prepare
 # This prepare script is where htk is built from scratch
-RUN ./prepare 
+RUN ./prepare
+
 # -----------------------------------------------------------------------
 
 # -------------------------------ESPnet----------------------------------
