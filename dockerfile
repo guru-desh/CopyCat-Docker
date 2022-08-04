@@ -221,10 +221,11 @@ RUN git clone https://github.com/tensorflow/tensorflow.git && \
     cd tensorflow && \
     git checkout r2.9 && \
     python3 configure.py --use_gpu=True --cuda_compiled_path=/usr/local/cuda && \
-    bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package && \
+    bazel build --config=opt --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
     bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
     python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.0-cp36-cp36m-linux_aarch64.whl && \
-    rm -rf /tmp/tensorflow_pkg && \
+    rm -rf /tmp/tensorflow_pkg && \ 
+    cd / && \
     rm -rf tensorflow
 # -----------------------------------------------------------------------
 
