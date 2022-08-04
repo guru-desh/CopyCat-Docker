@@ -204,8 +204,9 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     jupyter \
     numba \
     cupy-cuda102 \
-    p-tqdm
-RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
+    p-tqdm && \
+    python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 && \
+    python3 -m pip uninstall tensorflow
 
 # Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
 RUN apt install apt-transport-https curl gnupg && \
