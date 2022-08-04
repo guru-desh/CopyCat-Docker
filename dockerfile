@@ -206,6 +206,25 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     cupy-cuda102 \
     p-tqdm
 RUN python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
+
+# Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
+RUN apt install apt-transport-https curl gnupg && \
+    curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg && \
+    mv bazel-archive-keyring.gpg /usr/share/keyrings && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
+    apt-get update && \
+    apt-get install bazel-5.0.0 && \
+    apt-get install openjdk-11-jdk && \
+    rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/tensorflow/tensorflow.git && \
+    cd tensorflow && \
+    git checkout r2.9 && \
+    python3 configure.py --use_gpu=True --cuda_compiled_path=/usr/local/cuda && \
+    bazel build --config=opt --config=cuda //tensorflow/tools/pip_package:build_pip_package && \
+    bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
+    python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.0-cp36-cp36m-linux_aarch64.whl && \
+    rm -rf /tmp/tensorflow_pkg && \
+    rm -rf tensorflow
 # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
