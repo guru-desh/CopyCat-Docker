@@ -117,7 +117,7 @@ RUN ./prepare
 # -------------------------------ESPnet----------------------------------
 WORKDIR /
 # Install Kaldi inside of ESPnet (source: http://jrmeyer.github.io/asr/2016/01/26/Installing-Kaldi.html)
-RUN git clone https://github.com/espnet/espnet && \
+RUN rm -rf /espnet && git clone https://github.com/espnet/espnet && \
     cd espnet/tools && \
     git clone https://github.com/kaldi-asr/kaldi.git && \
     # Ran the check_dependencies.sh script to check dependencies and saw that this needed to be run
@@ -140,26 +140,26 @@ RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
     make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     ./setup_cuda_env.sh /usr/local/cuda && \
     # Based on running the python3 check_install.py, these packages need to be installed
-    ./installers/install_chainer_ctc.sh && \
-    ./installers/install_kenlm.sh && \
-    ./installers/install_py3mmseg.sh && \
-    ./installers/install_phonemizer.sh && \
-    ./installers/install_gtn.sh && \
-    ./installers/install_s3prl.sh && \
-    ./installers/install_transformers.sh && \
-    ./installers/install_speechbrain.sh && \
-    ./installers/install_k2.sh && \
-    ./installers/install_longformer.sh && \
-    ./installers/install_pesq.sh && \
-    ./installers/install_beamformit.sh && \
-    ./installers/install_tdmelodic_pyopenjtalk.sh && \
-    ./installers/install_fairseq.sh && \
-    ./installers/install_sctk.sh && \
-    ./installers/install_sph2pipe.sh && \
-    # Optional packages for ESPnet
-    ./installers/install_warp-ctc.sh && \
-    ./installers/install_warp-transducer.sh && \
-    ./installers/install_pyopenjtalk.sh && \
+    # ./installers/install_chainer_ctc.sh && \
+    # ./installers/install_kenlm.sh && \
+    # ./installers/install_py3mmseg.sh && \
+    # ./installers/install_phonemizer.sh && \
+    # ./installers/install_gtn.sh && \
+    # ./installers/install_s3prl.sh && \
+    # ./installers/install_transformers.sh && \
+    # ./installers/install_speechbrain.sh && \
+    # ./installers/install_k2.sh && \
+    # ./installers/install_longformer.sh && \
+    # ./installers/install_pesq.sh && \
+    # ./installers/install_beamformit.sh && \
+    # ./installers/install_tdmelodic_pyopenjtalk.sh && \
+    # ./installers/install_fairseq.sh && \
+    # ./installers/install_sctk.sh && \
+    # ./installers/install_sph2pipe.sh && \
+    # # Optional packages for ESPnet
+    # ./installers/install_warp-ctc.sh && \
+    # ./installers/install_warp-transducer.sh && \
+    # ./installers/install_pyopenjtalk.sh && \
     python3 check_install.py
 # -----------------------------------------------------------------------
 
@@ -181,7 +181,7 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
 # ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
 ENV CUDA_HOME=/usr/local/cuda-10.2
-ENV LD_LIBRARY_PATH=${CUDA_HOME}:${CUDA_HOME}/compat:${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64
+ENV LD_LIBRARY_PATH=${CUDA_HOME}:${CUDA_HOME}/compat:${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64:/usr/include:/usr/lib/x86_64-linux-gnu
 ENV PATH=${CUDA_HOME}/bin:${PATH}
 
 RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
@@ -210,48 +210,58 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     numba \
     cupy-cuda102 \
     p-tqdm && \
-    python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 && \
-    python3 -m pip uninstall -y tensorflow && \
-    python3 -m pip install tensorflow==2.3.0 && \
-    python3 -m pip install --upgrade numpy
+    python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
 
-RUN cd /usr/local/cuda-10.2/targets/x86_64-linux/lib/ && \
-    ln -s libcudart.so.10.2.89 libcudart.so.10.1 && \
-    cd /usr/lib/x86_64-linux-gnu/ && \
-    ln -s libcudnn.so.8 ${CUDA_HOME}/libcudnn.so.7
+# Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
+RUN apt install apt-transport-https curl gnupg && \
+    curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg && \
+    mv bazel-archive-keyring.gpg /usr/share/keyrings && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
+    apt-get update && \
+    apt-get install -y bazel-5.0.0 && \
+    ln -s /usr/bin/bazel-5.0.0 /usr/bin/bazel && \
+    apt-get install -y openjdk-11-jdk && \
+    apt-get update && \
+    rm -rf /var/lib/apt/lists/*
 
-# # Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
-# RUN apt install apt-transport-https curl gnupg && \
-#     curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg && \
-#     mv bazel-archive-keyring.gpg /usr/share/keyrings && \
-#     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
-#     apt-get update && \
-#     apt-get install -y bazel-5.0.0 && \
-#     ln -s /usr/bin/bazel-5.0.0 /usr/bin/bazel && \
-#     apt-get install -y openjdk-11-jdk && \
-#     apt-get update && \
-#     rm -rf /var/lib/apt/lists/*
+ENV TF_NEED_CUDA=1 \
+    TF_CUDA_VERSION=10.2 \
+    CUDA_TOOLKIT_PATH=/usr/local/cuda \
+    TF_CUDNN_VERSION=8 \
+    CUDNN_INSTALL_PATH=/usr \
+    TF_CUDA_COMPUTE_CAPABILITIES=6.1,7.0,7.5 \
+    CC_OPT_FLAGS="--config=cuda" \
+    PYTHON_BIN_PATH="/opt/conda/bin/python"
+    
+# Create symlinks for cublas and cudnn
+RUN ln -s /usr/include/cublas.h /usr/local/cuda/include/cublas.h && \
+    ln -s /usr/include/cublasLt.h /usr/local/cuda/include/cublasLt.h && \
+    ln -s /usr/include/cublasXt.h /usr/local/cuda/include/cublasXt.h && \
+    ln -s /usr/include/cublas_api.h /usr/local/cuda/include/cublas_api.h && \
+    ln -s /usr/include/cublas_v2.h /usr/local/cuda/include/cublas_v2.h && \
+    ln -s /usr/include/cudnn.h /usr/local/cuda/include/cudnn.h && \
+    ln -s /usr/include/cudnn_adv_infer.h /usr/local/cuda/include/cudnn_adv_infer.h && \
+    ln -s /usr/include/cudnn_adv_train.h /usr/local/cuda/include/cudnn_adv_train.h && \
+    ln -s /usr/include/cudnn_backend.h /usr/local/cuda/include/cudnn_backend.h && \
+    ln -s /usr/include/cudnn_cnn_infer.h /usr/local/cuda/include/cudnn_cnn_infer.h && \
+    ln -s /usr/include/cudnn_cnn_train.h /usr/local/cuda/include/cudnn_cnn_train.h && \
+    ln -s /usr/include/cudnn_ops_infer.h /usr/local/cuda/include/cudnn_ops_infer.h && \
+    ln -s /usr/include/cudnn_ops_train.h /usr/local/cuda/include/cudnn_ops_train.h && \
+    ln -s /usr/include/cudnn_version.h /usr/local/cuda/include/cudnn_version.h
 
-# ENV TF_NEED_CUDA=1 \
-#     TF_CUDA_VERSION=10.2 \
-#     CUDA_TOOLKIT_PATH=/usr/local/cuda \
-#     TF_CUDNN_VERSION=8 \
-#     CUDNN_INSTALL_PATH=/usr \
-#     TF_CUDA_COMPUTE_CAPABILITIES=6.1,7.0,7.5 \
-#     CC_OPT_FLAGS="--config=cuda" \
-#     PYTHON_BIN_PATH="/opt/conda/bin/python" 
-
-# RUN git clone https://github.com/tensorflow/tensorflow.git && \
-#     cd tensorflow && \
-#     git checkout r2.9 && \
-#     ./configure && \
-#     bazel build --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
-#     bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
-#     python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.0-cp36-cp36m-linux_aarch64.whl && \
-#     rm -rf /tmp/tensorflow_pkg && \ 
-#     cd / && \
-#     rm -rf tensorflow
-# # -----------------------------------------------------------------------
+# Build tensorflow from source
+RUN rm -rf /tensorflow && git clone https://github.com/tensorflow/tensorflow.git && \
+    cd tensorflow && \
+    git checkout r2.9 && \
+    ./configure && \
+    bazel clean --expunge && \
+    bazel build --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
+    bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
+    python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl && \
+    rm -rf /tmp/tensorflow_pkg && \ 
+    cd / && \
+    rm -rf tensorflow
+# -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
 # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
