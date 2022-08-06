@@ -180,6 +180,10 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
 # Will install all dependencies for the project simply by looking at the imports for the CopyCat-HTK repo. 
 # ESPnet already installs a majority of them
 # However, pip will just say "requirement installed" if it is already installed
+ENV CUDA_HOME=/usr/local/cuda-10.2
+ENV LD_LIBRARY_PATH=${CUDA_HOME}:${CUDA_HOME}/compat:${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+
 RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     numpy \
     torch \
@@ -208,16 +212,13 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     p-tqdm && \
     python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 && \
     python3 -m pip uninstall -y tensorflow && \
-    python3 -m pip install tensorflow==2.3.0
+    python3 -m pip install tensorflow==2.3.0 && \
+    python3 -m pip install --upgrade numpy
 
 RUN cd /usr/local/cuda-10.2/targets/x86_64-linux/lib/ && \
     ln -s libcudart.so.10.2.89 libcudart.so.10.1 && \
-    cd /usr/local/cuda-10.2/lib64 && \
-    ln -s libcudnn.so.8 libcudnn.so.7
-
-ENV CUDA_HOME=/usr/local/cuda-10.2
-ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64
-ENV PATH=${CUDA_HOME}/bin:${PATH}
+    cd /usr/lib/x86_64-linux-gnu/ && \
+    ln -s libcudnn.so.8 ${CUDA_HOME}/libcudnn.so.7
 
 # # Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
 # RUN apt install apt-transport-https curl gnupg && \
