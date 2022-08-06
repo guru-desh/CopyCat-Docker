@@ -93,7 +93,8 @@ RUN add-apt-repository ppa:git-core/ppa -y && apt-get update && apt-get install 
 
 # Install Miniconda
 ENV CONDA_DIR /opt/conda
-RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
+RUN rm -rf /opt/conda && \
+    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     # Needed for chainer_ctc install
     /opt/conda/bin/python3 -m pip install --upgrade pip setuptools
@@ -164,7 +165,7 @@ RUN ./setup_anaconda.sh ${CONDA_DIR} base 3.8 && \
 
 # ----------------------------Azure Kinect SDK---------------------------
 # In order to use apt-add-repository, we need to go back to Python3.6 as the default
-WORKDIR /espnet/tools
+WORKDIR /
 RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
     apt-add-repository https://packages.microsoft.com/ubuntu/18.04/prod && \
     apt-get update && \
@@ -172,7 +173,7 @@ RUN curl -sSL https://packages.microsoft.com/keys/microsoft.asc | apt-key add - 
     apt-get install -y \
         libk4a1.4 \
         libk4a1.4-dev && \
-    bash ./activate_python.sh && python3 -m pip install pyk4a 
+    bash /espnet/tools/activate_python.sh && python3 -m pip install pyk4a 
 # -----------------------------------------------------------------------
 
 # --------------------------Python Dependencies--------------------------
@@ -206,32 +207,53 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     cupy-cuda102 \
     p-tqdm && \
     python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 && \
-    python3 -m pip uninstall -y tensorflow
+    python3 -m pip uninstall -y tensorflow && \
+    python3 -m pip install tensorflow==2.3.0
 
-# Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
-RUN apt install apt-transport-https curl gnupg && \
-    curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg && \
-    mv bazel-archive-keyring.gpg /usr/share/keyrings && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
-    apt-get update && \
-    apt-get install -y bazel-5.0.0 && \
-    apt-get install -y openjdk-11-jdk && \
-    rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/tensorflow/tensorflow.git && \
-    cd tensorflow && \
-    git checkout r2.9 && \
-    python3 configure.py --use_gpu=True --cuda_compiled_path=/usr/local/cuda && \
-    bazel build --config=opt --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
-    bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
-    python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.0-cp36-cp36m-linux_aarch64.whl && \
-    rm -rf /tmp/tensorflow_pkg && \ 
-    cd / && \
-    rm -rf tensorflow
-# -----------------------------------------------------------------------
+RUN cd /usr/local/cuda-10.2/targets/x86_64-linux/lib/ && \
+    ln -s libcudart.so.10.2.89 libcudart.so.10.1 && \
+    cd /usr/local/cuda-10.2/lib64 && \
+    ln -s libcudnn.so.8 libcudnn.so.7
+
+ENV CUDA_HOME=/usr/local/cuda-10.2
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${CUDA_HOME}/extras/CUPTI/lib64
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+
+# # Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
+# RUN apt install apt-transport-https curl gnupg && \
+#     curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg && \
+#     mv bazel-archive-keyring.gpg /usr/share/keyrings && \
+#     echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list && \
+#     apt-get update && \
+#     apt-get install -y bazel-5.0.0 && \
+#     ln -s /usr/bin/bazel-5.0.0 /usr/bin/bazel && \
+#     apt-get install -y openjdk-11-jdk && \
+#     apt-get update && \
+#     rm -rf /var/lib/apt/lists/*
+
+# ENV TF_NEED_CUDA=1 \
+#     TF_CUDA_VERSION=10.2 \
+#     CUDA_TOOLKIT_PATH=/usr/local/cuda \
+#     TF_CUDNN_VERSION=8 \
+#     CUDNN_INSTALL_PATH=/usr \
+#     TF_CUDA_COMPUTE_CAPABILITIES=6.1,7.0,7.5 \
+#     CC_OPT_FLAGS="--config=cuda" \
+#     PYTHON_BIN_PATH="/opt/conda/bin/python" 
+
+# RUN git clone https://github.com/tensorflow/tensorflow.git && \
+#     cd tensorflow && \
+#     git checkout r2.9 && \
+#     ./configure && \
+#     bazel build --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
+#     bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
+#     python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.0-cp36-cp36m-linux_aarch64.whl && \
+#     rm -rf /tmp/tensorflow_pkg && \ 
+#     cd / && \
+#     rm -rf tensorflow
+# # -----------------------------------------------------------------------
 
 # -------------------------------OpenCV----------------------------------
 # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
-WORKDIR /
 RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
     # Download and unzip OpenCV and opencv_contrib and delete zip files
     wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
