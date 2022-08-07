@@ -210,7 +210,7 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     numba \
     cupy-cuda102 \
     p-tqdm && \
-    python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66
+    python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 tensorflow
 
 # Install Tensorflow from source since there isn't a TF Version for CUDA 10.2
 RUN apt install apt-transport-https curl gnupg && \
@@ -257,49 +257,46 @@ RUN rm -rf /tensorflow && git clone https://github.com/tensorflow/tensorflow.git
     bazel clean --expunge && \
     bazel build --config=cuda --local_ram_resources="$(free -m | grep '^Mem:' | grep -o '[^ ]*$')" //tensorflow/tools/pip_package:build_pip_package && \
     bazel-bin/tensorflow/tools/pip_package/build_pip_package /tmp/tensorflow_pkg && \
-    python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl && \
-    rm -rf /tmp/tensorflow_pkg && \ 
-    cd / && \
-    rm -rf tensorflow
+    python3 -m pip install /tmp/tensorflow_pkg/tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl
 # -----------------------------------------------------------------------
 
-# -------------------------------OpenCV----------------------------------
-# Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
-RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
-    # Download and unzip OpenCV and opencv_contrib and delete zip files
-    wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
-    unzip -qq ${OPENCV_VERSION}.zip &&\
-    rm ${OPENCV_VERSION}.zip &&\
-    wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
-    unzip -qq ${OPENCV_VERSION}.zip &&\
-    rm ${OPENCV_VERSION}.zip &&\
-    # Create build folder and switch to it
-    mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
-    # Cmake configure
-    cmake \
-        -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
-        -DBUILD_opencv_python2=OFF \
-        -DBUILD_opencv_python3=ON \
-        -DWITH_CUDA=ON \
-        -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
-        -DCMAKE_BUILD_TYPE=RELEASE \
-        -DCUDNN_VERSION=8.0 \
-        -DPYTHON3_LIBRARY=/opt/conda/lib/python3.8 \
-        -DPYTHON3_INCLUDE_DIR=/opt/conda/include/python3.8 \
-        -DPYTHON3_EXECUTABLE=/opt/conda/bin/python \
-        -DPYTHON3_PACKAGES_PATH=/opt/conda/lib/python3.8/site-packages \
-        .. &&\
-    # Make
-    make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
-    # Install to /usr/local/lib
-    make install && \
-    ldconfig && \
-    # Remove OpenCV sources and build folder
-    rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
-# -----------------------------------------------------------------------
+# # -------------------------------OpenCV----------------------------------
+# # Source: https://github.com/JulianAssmann/opencv-cuda-docker/blob/master/ubuntu-20.04/opencv-4.5/cuda-11.1/Dockerfile
+# RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
+#     # Download and unzip OpenCV and opencv_contrib and delete zip files
+#     wget --quiet https://github.com/opencv/opencv/archive/$OPENCV_VERSION.zip &&\
+#     unzip -qq ${OPENCV_VERSION}.zip &&\
+#     rm ${OPENCV_VERSION}.zip &&\
+#     wget --quiet https://github.com/opencv/opencv_contrib/archive/$OPENCV_VERSION.zip &&\
+#     unzip -qq ${OPENCV_VERSION}.zip &&\
+#     rm ${OPENCV_VERSION}.zip &&\
+#     # Create build folder and switch to it
+#     mkdir /opt/opencv-${OPENCV_VERSION}/build && cd /opt/opencv-${OPENCV_VERSION}/build &&\
+#     # Cmake configure
+#     cmake \
+#         -DOPENCV_EXTRA_MODULES_PATH=/opt/opencv_contrib-${OPENCV_VERSION}/modules \
+#         -DBUILD_opencv_python2=OFF \
+#         -DBUILD_opencv_python3=ON \
+#         -DWITH_CUDA=ON \
+#         -DCUDA_ARCH_BIN=6.1,7.0,7.5 \
+#         -DCMAKE_BUILD_TYPE=RELEASE \
+#         -DCUDNN_VERSION=8.0 \
+#         -DPYTHON3_LIBRARY=/opt/conda/lib/python3.8 \
+#         -DPYTHON3_INCLUDE_DIR=/opt/conda/include/python3.8 \
+#         -DPYTHON3_EXECUTABLE=/opt/conda/bin/python \
+#         -DPYTHON3_PACKAGES_PATH=/opt/conda/lib/python3.8/site-packages \
+#         .. &&\
+#     # Make
+#     make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
+#     # Install to /usr/local/lib
+#     make install && \
+#     ldconfig && \
+#     # Remove OpenCV sources and build folder
+#     rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
+# # -----------------------------------------------------------------------
 
-# -------------------------------CopyCat---------------------------------
-# Download the CopyCat-HTK repository
-WORKDIR /
-RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
-# -----------------------------------------------------------------------
+# # -------------------------------CopyCat---------------------------------
+# # Download the CopyCat-HTK repository
+# WORKDIR /
+# RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
+# # -----------------------------------------------------------------------
