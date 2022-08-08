@@ -7,7 +7,7 @@ These are the main dependencies of the CopyCat environment:
 - Python 3.8 (via Miniconda)
 - OpenCV (built with `cmake` to include GPU support)
 - CUDA 10.2
-- CUDNN 8
+- cuDNN 8
 - HTK
 - ESPnet (contains PyTorch with GPU support)
 - Tensorflow (with GPU Support)
