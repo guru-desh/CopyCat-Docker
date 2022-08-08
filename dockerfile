@@ -69,7 +69,7 @@ RUN apt-get update && apt-get upgrade -y &&\
         libgtk2.0-dev \
         # Installs numpy for Python 2.7
         python-numpy \
-    # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
+        # ESPnet only works for Python 3.7 and above -- installing 3.8 because Python 3.7 failed for the "pip install -e ." command
         python3-dev \ 
         python3-pip \
     # Install dependencies for ESPnet
@@ -124,6 +124,7 @@ RUN rm -rf /espnet && git clone https://github.com/espnet/espnet && \
     ./kaldi/tools/extras/install_mkl.sh && \
     cd kaldi/tools && \
     # Could not use -j due to packages not compiling. Removing -j fixed the issue: https://github.com/kaldi-asr/kaldi/issues/3987
+    # Added -j back since I had Ebisu's RAM to use
     make -j "$(($(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc)))>1 ? $(($((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) < $(nproc) ? $((`free -g | grep '^Mem:' | grep -o '[^ ]*$'`/2)) : $(nproc))) : 1))" && \
     ./extras/install_irstlm.sh && \
     cd ../src && \
@@ -208,6 +209,7 @@ RUN bash /espnet/tools/activate_python.sh && python3 -m pip install \
     p-tqdm && \
     python3 -m pip uninstall -y opencv-contrib-python==4.6.0.66 tensorflow
 
+# Install Tensorflow built from source by Ebisu
 COPY tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl
 RUN python3 -m pip install tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl && \
     rm -rf tensorflow-2.9.1-cp38-cp38-linux_x86_64.whl
@@ -248,8 +250,8 @@ RUN bash /espnet/tools/activate_python.sh && cd /opt/ &&\
     rm -rf /opt/opencv-${OPENCV_VERSION} && rm -rf /opt/opencv_contrib-${OPENCV_VERSION}
 # -----------------------------------------------------------------------
 
-# -------------------------------CopyCat---------------------------------
-# Download the CopyCat-HTK repository
-WORKDIR /
-RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
-# -----------------------------------------------------------------------
+# # -------------------------------CopyCat---------------------------------
+# # Download the CopyCat-HTK repository
+# WORKDIR /
+# RUN git clone -b DataAugmentation https://github.com/ishanchadha01/CopyCat-HTK.git
+# # -----------------------------------------------------------------------
