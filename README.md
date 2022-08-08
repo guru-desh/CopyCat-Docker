@@ -16,6 +16,6 @@ These are the main dependencies of the CopyCat environment:
 
 It is recommended to simply pull the docker image from Docker Hub. Here is the link to the Docker Hub Repository for CopyCat: [https://hub.docker.com/r/gurudesh/copycat](https://hub.docker.com/r/gurudesh/copycat)
 
-To <u>build</u> the docker image, type `docker compose up --build -d` with the dockerfile in same directory as your terminal. **This step takes 1 hour on Ebisu and took 8 hours on Guru's local computer**
+To <u>build</u> the docker image, type `docker-compose up --build -d` with the dockerfile in same directory as your terminal. **This step takes 1 hour on Ebisu and took 8 hours on Guru's local computer**
 
 To <u>open</u> the docker container, type `docker exec -it container_id bash`
