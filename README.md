@@ -1,5 +1,7 @@
 # CopyCat-Docker
 
+*** This repo is archived in favor of https://github.com/Accessible-Technology-in-Sign/ASLRT-Docker ***
+
 This is the repo that contains instructions to create the environment for the CopyCat Project.
 
 These are the main dependencies of the CopyCat environment:
